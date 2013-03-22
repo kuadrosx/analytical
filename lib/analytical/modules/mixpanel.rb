@@ -2,6 +2,7 @@ module Analytical
   module Modules
     class Mixpanel
       include Analytical::Modules::Base
+      PEOPLE_FUNCTIONS = %w[set increment track_charge clear_charges delete_user]
 
       def initialize(options={})
         super
@@ -23,7 +24,7 @@ module Analytical
             'track_forms','register','register_once','unregister','identify','alias','name_tag',
             'set_config','people.set','people.increment','people.track_charge','people.append'];
             for(e=0;e<h.length;e++)d(g,h[e]);a._i.push([b,c,f])};a.__SV=1.2;})(document,window.mixpanel||[]);
-            mixpanel.init("#{options[:key]}");
+            mixpanel.init("#{options[:key]}", #{options[:settings].to_json});
           </script>
           HTML
           js
@@ -31,7 +32,7 @@ module Analytical
       end
 
       def track(event, properties = {})
-        callback = properties.delete(:callback) || "function(){}"
+        callback = (properties||{}).delete(:callback) || "function(){}"
         %(mixpanel.track("#{event}", #{properties.to_json}, #{callback});)
       end
 
@@ -45,6 +46,15 @@ module Analytical
         name = opts.is_a?(Hash) ? opts[:name] : ""
         name_str = name.blank? ? "" : " mixpanel.name_tag('#{name}');"
         %(mixpanel.identify('#{id}');#{name_str})
+      end
+
+      def alias(id)
+        %(mixpanel.alias('#{id}');)
+      end
+
+      def people(function, args)
+        raise "#{function} is not supported" if !PEOPLE_FUNCTIONS.include?(function)
+        %(mixpanel.people.#{function}(#{args.to_json});)
       end
 
       def event(name, attributes = {})
